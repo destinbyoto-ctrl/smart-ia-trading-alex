@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: siata-postgres
+    environment:
+      POSTGRES_USER: siata_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-SecurePass2025!}
+      POSTGRES_DB: siata_main
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U siata_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - siata-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: siata-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-RedisSecure2025!}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - siata-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: siata-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_USER: siata_user
+      DB_PASSWORD: ${DB_PASSWORD:-SecurePass2025!}
+      DB_NAME: siata_main
+      REDIS_URL: redis://:${REDIS_PASSWORD:-RedisSecure2025!}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-JWTSecret2025!AlexAI}
+      JWT_EXPIRES_IN: 7d
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-RefreshSecret2025!}
+      MT5_BRIDGE_URL: ${MT5_BRIDGE_URL:-ws://localhost:8888}
+      AI_ENGINE_URL: http://ai-engine:5000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - siata-network
+
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: siata-ai
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD:-RedisSecure2025!}@redis:6379
+      API_URL: http://backend:3000
+      PYTHONUNBUFFERED: 1
+      TF_CPP_MIN_LOG_LEVEL: 2
+      PORT: 5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+      - backend
+    volumes:
+      - ./ai-engine:/app
+      - ai_models:/app/models
+      - /app/__pycache__
+    restart: unless-stopped
+    networks:
+      - siata-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: siata-frontend
+    environment:
+      REACT_APP_API_URL: ${API_URL:-http://localhost:3000}
+      REACT_APP_ENV: production
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - siata-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  ai_models:
+
+networks:
+  siata-network:
+    driver: bridge

@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+python.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# Testing
+.coverage
+.pytest_cache/
+.nyc_output/
+coverage/
+
+# Credentials & Secrets
+*.pem
+*.key
+*.crt
+*.p8
+secrets/
+
+# Local development
+.db
+*.db
+*.sqlite
+*.sqlite3
+
+# AI Models
+models/*.h5
+models/*.pt
+models/*.pkl
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
